@@ -290,7 +290,7 @@ func (rm *ResourceMock) consumeFile() {
 	}
 }
 
-// consumeCPU simulates CPU usage
+// consumeCPU simulates CPU usage across multiple cores
 func (rm *ResourceMock) consumeCPU() {
 	defer rm.wg.Done()
 
@@ -298,7 +298,19 @@ func (rm *ResourceMock) consumeCPU() {
 		return
 	}
 
-	fmt.Printf("Starting CPU consumption (rampup to %.1f%%)\n", rm.config.CPUPercent)
+	numCPU := runtime.NumCPU()
+	fmt.Printf("Starting CPU consumption (rampup to %.1f%% across %d cores)\n", rm.config.CPUPercent, numCPU)
+
+	// Start one goroutine per CPU core
+	for i := 0; i < numCPU; i++ {
+		rm.wg.Add(1)
+		go rm.cpuWorker(i)
+	}
+}
+
+// cpuWorker simulates CPU usage on a single core
+func (rm *ResourceMock) cpuWorker(coreID int) {
+	defer rm.wg.Done()
 
 	lastCPUPercent := float64(-1)
 
@@ -310,11 +322,11 @@ func (rm *ResourceMock) consumeCPU() {
 			// Get current target CPU usage
 			currentCPUPercent, _, _ := rm.getCurrentResourceUsage()
 
-			// Update sleep time if CPU percentage changed
-			if currentCPUPercent != lastCPUPercent {
+			// Update sleep time if CPU percentage changed (only log from first core)
+			if currentCPUPercent != lastCPUPercent && coreID == 0 {
 				lastCPUPercent = currentCPUPercent
 				if currentCPUPercent > 0 {
-					fmt.Printf("CPU usage: %.1f%%\n", currentCPUPercent)
+					fmt.Printf("CPU usage: %.1f%% (across %d cores)\n", currentCPUPercent, runtime.NumCPU())
 				}
 			}
 

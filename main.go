@@ -330,19 +330,23 @@ func (rm *ResourceMock) cpuWorker(coreID int) {
 				}
 			}
 
-			// Calculate sleep time based on current CPU percentage
-			// For 100% CPU, we don't sleep at all
-			// For 50% CPU, we sleep 50% of the time
-			sleepTime := time.Duration((100-currentCPUPercent)*10000) * time.Microsecond
+			// Calculate work and sleep time based on current CPU percentage
+			// For 30% CPU: work for 30ms, sleep for 70ms in a 100ms cycle
+			workDuration := time.Duration(currentCPUPercent) * time.Millisecond
+			sleepDuration := time.Duration(100-currentCPUPercent) * time.Millisecond
 
-			// Do some CPU-intensive work
-			for i := 0; i < 10000; i++ {
-				_ = i * i
+			// Do CPU-intensive work for the calculated duration
+			workStart := time.Now()
+			for time.Since(workStart) < workDuration {
+				// CPU-intensive work
+				for i := 0; i < 1000; i++ {
+					_ = i * i
+				}
 			}
 
-			// Sleep to control CPU usage
-			if sleepTime > 0 {
-				time.Sleep(sleepTime)
+			// Sleep for the remaining time to achieve target CPU usage
+			if sleepDuration > 0 {
+				time.Sleep(sleepDuration)
 			}
 		}
 	}

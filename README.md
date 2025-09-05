@@ -39,10 +39,10 @@ go build -o outagemock main.go
 
 ### 命令行参数
 
-- `-cpu float`: CPU使用率百分比 (0-100，默认: 50.0)
-- `-memory int`: 内存大小，单位MB (默认: 100)
-- `-fsize int`: 磁盘空间占用大小，单位MB (默认: 200)
-- `-fpath string`: 文件路径，用于在指定磁盘上创建文件 (默认: "outagemock_temp_file")
+- `-cpu float`: CPU使用率百分比 (0-100，默认: 0)
+- `-memory int`: 内存大小，单位MB (默认: 0)
+- `-fsize string`: 磁盘空间占用大小，支持单位 M、G、T (例如: 100M, 1.5G, 2T，默认: "0")
+- `-fpath string`: 文件路径，用于在指定磁盘上创建文件 (默认: "/var/tmp/outagemock_temp_file")
 - `-duration duration`: 运行时间 (默认: 30s)
 - `-rampup duration`: 预热时间，CPU、内存和文件大小线性增长到目标值的时间 (默认: 10s)
 
@@ -50,22 +50,17 @@ go build -o outagemock main.go
 
 ```bash
 # 模拟75% CPU使用率，200MB内存，在/data目录占用500MB磁盘空间，运行60秒，30秒预热
-./outagemock -cpu 75 -memory 200 -fsize 500 -fpath /data/test_file -duration 60s -rampup 30s
+./outagemock -cpu 75 -memory 200 -fsize 500M -fpath /data/test_file -duration 60s -rampup 30s
 
 # 只消耗CPU，不消耗内存和磁盘空间，10秒预热到80%
-./outagemock -cpu 80 -memory 0 -fsize 0 -duration 10s -rampup 10s
+./outagemock -cpu 80 -duration 10s -rampup 10s
 
 # 只消耗内存，不消耗CPU和磁盘空间，5秒预热到500MB
-./outagemock -cpu 0 -memory 500 -fsize 0 -duration 30s -rampup 5s
+./outagemock -memory 500 -duration 30s -rampup 5s
 
 # 只在指定磁盘上占用空间，不消耗CPU和内存，20秒预热到1GB
-./outagemock -cpu 0 -memory 0 -fsize 1000 -fpath /var/log/large_file -duration 60s -rampup 20s
+./outagemock -fsize 1G -fpath /var/log/large_file -duration 60s -rampup 20s
 
-# 快速预热：1秒内达到目标资源使用率
-./outagemock -cpu 90 -memory 1000 -fsize 0 -duration 30s -rampup 1s
-
-# 在指定磁盘分区上占用空间
-./outagemock -cpu 50 -memory 100 -fsize 200 -fpath /mnt/disk1/test_file -duration 30s -rampup 5s
 ```
 
 ### 使用Makefile

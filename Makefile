@@ -15,7 +15,7 @@ run: build
 
 # Run with custom parameters (example)
 run-example: build
-	./outagemock -cpu 75 -memory 200 -fsize 500 -fpath /tmp/test_file -duration 60s -rampup 30s
+	./outagemock -cpu 75 -memory 200 -fsize 500 -fpath /data/test_file -duration 60s -rampup 30s
 
 # Test the build
 test: build

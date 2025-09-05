@@ -1,12 +1,12 @@
 # OutageMock
 
-一个用于模拟系统资源消耗的Go可执行程序，可以模拟CPU使用率、内存占用和文件增长，用于测试和压力测试场景。
+一个用于模拟系统资源消耗的Go可执行程序，可以模拟CPU使用率、内存占用和指定磁盘上的文件空间占用，用于测试和压力测试场景。
 
 ## 功能特性
 
 - **CPU使用率模拟**: 精确控制CPU使用率（0-100%），支持线性预热
 - **内存消耗**: 分配指定大小的RSS内存并进行随机访问以防止交换到磁盘，支持线性预热
-- **文件创建**: 创建指定大小的文件，支持线性预热
+- **磁盘空间占用**: 在指定路径创建指定大小的文件，支持线性预热，用于模拟磁盘空间占用
 - **预热控制**: 支持设置预热时间，CPU、内存和文件大小会线性增长到目标值
 - **时间控制**: 程序在指定时间后自动停止
 - **优雅退出**: 支持信号处理和异常退出时的资源清理
@@ -41,31 +41,31 @@ go build -o outagemock main.go
 
 - `-cpu float`: CPU使用率百分比 (0-100，默认: 50.0)
 - `-memory int`: 内存大小，单位MB (默认: 100)
-- `-fsize int`: 文件大小，单位MB (默认: 200)
-- `-fpath string`: 文件路径 (默认: "outagemock_temp_file")
+- `-fsize int`: 磁盘空间占用大小，单位MB (默认: 200)
+- `-fpath string`: 文件路径，用于在指定磁盘上创建文件 (默认: "outagemock_temp_file")
 - `-duration duration`: 运行时间 (默认: 30s)
 - `-rampup duration`: 预热时间，CPU、内存和文件大小线性增长到目标值的时间 (默认: 10s)
 
 ### 使用示例
 
 ```bash
-# 模拟75% CPU使用率，200MB内存，500MB文件，运行60秒，30秒预热
-./outagemock -cpu 75 -memory 200 -fsize 500 -fpath /tmp/test_file -duration 60s -rampup 30s
+# 模拟75% CPU使用率，200MB内存，在/data目录占用500MB磁盘空间，运行60秒，30秒预热
+./outagemock -cpu 75 -memory 200 -fsize 500 -fpath /data/test_file -duration 60s -rampup 30s
 
-# 只消耗CPU，不消耗内存和文件，10秒预热到80%
+# 只消耗CPU，不消耗内存和磁盘空间，10秒预热到80%
 ./outagemock -cpu 80 -memory 0 -fsize 0 -duration 10s -rampup 10s
 
-# 只消耗内存，不消耗CPU和文件，5秒预热到500MB
+# 只消耗内存，不消耗CPU和磁盘空间，5秒预热到500MB
 ./outagemock -cpu 0 -memory 500 -fsize 0 -duration 30s -rampup 5s
 
-# 只创建文件，不消耗CPU和内存，20秒预热到1GB
-./outagemock -cpu 0 -memory 0 -fsize 1000 -fpath /var/tmp/large_file -duration 60s -rampup 20s
+# 只在指定磁盘上占用空间，不消耗CPU和内存，20秒预热到1GB
+./outagemock -cpu 0 -memory 0 -fsize 1000 -fpath /var/log/large_file -duration 60s -rampup 20s
 
 # 快速预热：1秒内达到目标资源使用率
 ./outagemock -cpu 90 -memory 1000 -fsize 0 -duration 30s -rampup 1s
 
-# 使用自定义文件路径
-./outagemock -cpu 50 -memory 100 -fsize 200 -fpath /tmp/my_test_file -duration 30s -rampup 5s
+# 在指定磁盘分区上占用空间
+./outagemock -cpu 50 -memory 100 -fsize 200 -fpath /mnt/disk1/test_file -duration 30s -rampup 5s
 ```
 
 ### 使用Makefile
@@ -102,11 +102,12 @@ make help
 - 定期进行随机访问以防止操作系统将内存交换到磁盘
 - 使用质数进行索引计算以获得更好的分布
 
-### 文件创建
+### 磁盘空间占用
 - 在预热期间，文件大小从0MB线性增长到目标值
 - 预热完成后，保持目标文件大小
 - 使用缓冲区提高写入效率
 - 定期同步数据到磁盘
+- 文件创建在用户指定的路径，用于模拟特定磁盘分区的空间占用
 
 ### 资源清理
 - 使用`sync.Once`确保清理操作只执行一次
@@ -116,10 +117,12 @@ make help
 
 ## 注意事项
 
-1. **权限要求**: 程序需要在当前目录有写入权限以创建临时文件
+1. **权限要求**: 程序需要在指定路径有写入权限以创建文件
 2. **系统资源**: 请确保系统有足够的内存和磁盘空间
 3. **信号处理**: 程序会响应Ctrl+C等中断信号
-4. **文件清理**: 临时文件会在程序退出时自动删除
+4. **文件清理**: 临时文件会在程序正常退出时自动删除
+5. **Linux限制**: 如果进程被`kill -9`强制终止，文件可能不会被自动删除
+6. **磁盘空间模拟**: 此工具用于模拟指定磁盘分区的空间占用，请确保目标路径有足够的磁盘空间
 
 ## 故障排除
 

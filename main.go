@@ -281,9 +281,9 @@ func (rm *ResourceMock) consumeFile() {
 			if currentFileSizeMB != lastFileSizeMB {
 				lastFileSizeMB = currentFileSizeMB
 				if currentFileSizeMB > 0 {
-					fmt.Printf("File size: %.1f MB / %.1f MB\n",
-						float64(currentFileSizeMB),
-						float64(rm.config.FileSizeMB))
+									fmt.Printf("File size: %.1f MB / %.1f MB\n", 
+					float64(currentFileSizeMB), 
+					float64(rm.config.FileSizeMB))
 				}
 			}
 		}

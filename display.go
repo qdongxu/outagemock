@@ -110,8 +110,8 @@ func (dm *DisplayManager) showStartupParameters() {
 // showHeader displays the column headers
 func (dm *DisplayManager) showHeader() {
 	fmt.Println("┌─────────────────────────────────────────────────────────────────────────────┐")
-	fmt.Println("│ Time    │ CPU % │ Memory (MB) │ File (MB) │ Progress │")
-	fmt.Println("│         │       │ Target/Actual│ Target/Actual│         │")
+	fmt.Println("│ Time    │ CPU % │ Memory (MB)    │ File (MB)     │ Progress │")
+	fmt.Println("│         │       │ Target/Actual  │ Target/Actual │         │")
 	fmt.Println("├─────────────────────────────────────────────────────────────────────────────┤")
 }
 
@@ -148,7 +148,7 @@ func (dm *DisplayManager) showStatus(status ResourceStatus) {
 		fileStr = fmt.Sprintf("%d/%d", status.FileTargetMB, status.FileActualMB)
 	}
 	
-	fmt.Printf("│ %-7s │ %-5s │ %-11s │ %-11s │ %-7s │\n", 
+	fmt.Printf("│ %-7s │ %-5s │ %-13s │ %-13s │ %-7s │\n", 
 		elapsedStr, cpuStr, memStr, fileStr, progressStr)
 }
 

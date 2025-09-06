@@ -121,7 +121,6 @@ func (rm *ResourceMock) monitorSchedulerHealth() {
 	}
 }
 
-
 func main() {
 	var config Config
 	var fileSizeStr string
@@ -176,7 +175,6 @@ func main() {
 		cancel:   cancel,
 		filePath: config.FilePath,
 	}
-
 
 	// Setup signal handling for graceful shutdown
 	sigChan := make(chan os.Signal, 1)
@@ -236,12 +234,9 @@ func (rm *ResourceMock) Cleanup() {
 		rm.cancel()
 		rm.wg.Wait()
 
-		// Close and remove file
+		// Close file (file is already unlinked from disk, so no need to remove)
 		if rm.file != nil {
 			rm.file.Close()
-		}
-		if rm.filePath != "" {
-			os.Remove(rm.filePath)
 		}
 
 		// Clear memory

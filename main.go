@@ -28,16 +28,16 @@ type Config struct {
 
 // ResourceMock manages the resource consumption
 type ResourceMock struct {
-	config        Config
-	memory        []byte
-	file          *os.File
-	filePath      string
-	ctx           context.Context
-	cancel        context.CancelFunc
-	wg            sync.WaitGroup
-	cleanup       sync.Once
-	rampupStart   time.Time
-	displayMgr    *DisplayManager
+	config         Config
+	memory         []byte
+	file           *os.File
+	filePath       string
+	ctx            context.Context
+	cancel         context.CancelFunc
+	wg             sync.WaitGroup
+	cleanup        sync.Once
+	rampupStart    time.Time
+	displayMgr     *DisplayManager
 	resourceStatus ResourceStatus
 }
 
@@ -205,7 +205,7 @@ func main() {
 // Start begins resource consumption
 func (rm *ResourceMock) Start() {
 	rm.rampupStart = time.Now()
-	
+
 	// Initialize display manager
 	rm.displayMgr = NewDisplayManager(&rm.config, rm.rampupStart)
 	rm.displayMgr.Start()
@@ -227,7 +227,7 @@ func (rm *ResourceMock) Start() {
 		rm.wg.Add(1)
 		go rm.consumeCPU()
 	}
-	
+
 	// Start display update goroutine
 	rm.wg.Add(1)
 	go rm.updateDisplay()
@@ -241,10 +241,10 @@ func (rm *ResourceMock) Stop() {
 // updateDisplay updates the display with current resource status
 func (rm *ResourceMock) updateDisplay() {
 	defer rm.wg.Done()
-	
+
 	ticker := time.NewTicker(2 * time.Second)
 	defer ticker.Stop()
-	
+
 	for {
 		select {
 		case <-rm.ctx.Done():
@@ -254,7 +254,7 @@ func (rm *ResourceMock) updateDisplay() {
 			rm.resourceStatus.CPUPercent = rm.getCurrentCPUUsage()
 			rm.resourceStatus.MemoryTargetMB = rm.getCurrentMemoryUsage()
 			rm.resourceStatus.FileTargetMB = rm.getCurrentFileSizeUsage()
-			
+
 			// Update display
 			rm.displayMgr.UpdateStatus(rm.resourceStatus)
 		}
@@ -266,7 +266,7 @@ func (rm *ResourceMock) Cleanup() {
 	rm.cleanup.Do(func() {
 		rm.cancel()
 		rm.wg.Wait()
-		
+
 		// Stop display manager
 		if rm.displayMgr != nil {
 			rm.displayMgr.Stop()

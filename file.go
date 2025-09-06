@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"os"
 	"time"
@@ -39,7 +38,7 @@ func (rm *ResourceMock) consumeFile() {
 	}
 	rm.file = file
 
-	fmt.Printf("Created file: %s (rampup to %.1f MB)\n", rm.filePath, float64(rm.config.FileSizeMB))
+	//fmt.Printf("Created file: %s (rampup to %.1f MB)\n", rm.filePath, float64(rm.config.FileSizeMB))
 
 	buffer := make([]byte, 1024*1024) // 1MB buffer
 	for i := range buffer {
@@ -96,7 +95,7 @@ func (rm *ResourceMock) consumeFile() {
 					log.Fatalf("Failed to sync file: %v", err)
 				}
 			}
-			
+
 			// Update actual file size in resource status
 			rm.resourceStatus.FileActualMB = writtenBytes / (1024 * 1024)
 		}

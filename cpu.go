@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"runtime"
 	"time"
 )
@@ -31,7 +30,7 @@ func (rm *ResourceMock) consumeCPU() {
 	}
 
 	numCPU := runtime.NumCPU()
-	fmt.Printf("Starting CPU consumption (rampup to %.1f%% across %d cores)\n", rm.config.CPUPercent, numCPU)
+	//fmt.Printf("Starting CPU consumption (rampup to %.1f%% across %d cores)\n", rm.config.CPUPercent, numCPU)
 
 	// Start one goroutine per CPU core
 	for i := 0; i < numCPU; i++ {

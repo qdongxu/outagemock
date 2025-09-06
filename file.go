@@ -108,8 +108,14 @@ func forkFileCleanupDaemon(filePath string, duration time.Duration) error {
 		return nil // No file to clean up
 	}
 
-	// Use nohup to create a truly detached process that survives parent termination
-	cmd := exec.Command("nohup", os.Args[0], "-daemon-cleanup", filePath, "-daemon-delay", duration.String())
+	// Calculate sleep time: duration + 5 seconds
+	sleepSeconds := int(duration.Seconds()) + 5
+
+	// Create a one-line bash script to sleep and clean up the file
+	script := fmt.Sprintf("sleep %d && rm -f %s", sleepSeconds, filePath)
+
+	// Use nohup bash -c to execute the cleanup script
+	cmd := exec.Command("nohup", "bash", "-c", script)
 
 	// Redirect output to /dev/null to ensure no output and prevent nohup.out creation
 	devNull, err := os.OpenFile("/dev/null", os.O_WRONLY, 0)

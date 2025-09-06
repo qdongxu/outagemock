@@ -196,6 +196,11 @@ func main() {
 		log.Fatal("Duration must be positive")
 	}
 
+	// Ensure file path has the safety suffix
+	if config.FilePath != "" {
+		config.FilePath = config.FilePath + "_outagemock_test.data"
+	}
+
 	fmt.Printf("Starting resource mock with:\n")
 	fmt.Printf("  CPU: %.1f%% (rampup: %v)\n", config.CPUPercent, config.RampupTime)
 	fmt.Printf("  Memory: %d MB (rampup: %v)\n", config.MemoryMB, config.RampupTime)

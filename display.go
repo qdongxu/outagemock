@@ -70,29 +70,29 @@ func (dm *DisplayManager) showStartupParameters() {
 
 	// CPU Configuration
 	if dm.config.CPUPercent > 0 {
-		fmt.Printf("║ CPU Target: %-60s ║\n", fmt.Sprintf("%.1f%% (across %d cores)", dm.config.CPUPercent, runtime.NumCPU()))
+		fmt.Printf("║ CPU Target: %-64s ║\n", fmt.Sprintf("%.1f%% (across %d cores)", dm.config.CPUPercent, runtime.NumCPU()))
 	} else {
-		fmt.Printf("║ CPU Target: %-60s ║\n", "Disabled")
+		fmt.Printf("║ CPU Target: %-64s ║\n", "Disabled")
 	}
 
 	// Memory Configuration
 	if dm.config.MemoryMB > 0 {
-		fmt.Printf("║ Memory Target: %-60s ║\n", fmt.Sprintf("%d MB", dm.config.MemoryMB))
+		fmt.Printf("║ Memory Target: %-60s  ║\n", fmt.Sprintf("%d MB", dm.config.MemoryMB))
 	} else {
-		fmt.Printf("║ Memory Target: %-60s ║\n", "Disabled")
+		fmt.Printf("║ Memory Target: %-60s  ║\n", "Disabled")
 	}
 
 	// File Configuration
 	if dm.config.FileSizeMB > 0 {
 		fileInfo := fmt.Sprintf("%d MB (path: %s)", dm.config.FileSizeMB, dm.config.FilePath)
-		fmt.Printf("║ File Target: %-60s ║\n", fileInfo)
+		fmt.Printf("║ File Target: %-63s ║\n", fileInfo)
 	} else {
-		fmt.Printf("║ File Target: %-60s ║\n", "Disabled")
+		fmt.Printf("║ File Target: %-63s ║\n", "Disabled")
 	}
 
 	// Duration and Rampup
 	durationInfo := fmt.Sprintf("%s, Rampup: %s", dm.config.Duration, dm.config.RampupTime)
-	fmt.Printf("║ Duration: %-60s ║\n", durationInfo)
+	fmt.Printf("║ Duration: %-66s ║\n", durationInfo)
 
 	fmt.Println("╚══════════════════════════════════════════════════════════════════════════════╝")
 	fmt.Println()
@@ -100,10 +100,10 @@ func (dm *DisplayManager) showStartupParameters() {
 
 // showHeader displays the column headers
 func (dm *DisplayManager) showHeader() {
-	fmt.Println("┌───────────────────────────────────────────────────────────────────────────────┐")
-	fmt.Println("│ Time    │ CPU % │ Memory (MB)       │ File (MB)         │ Progress            │")
-	fmt.Println("│         │       │ Target/Actual     │ Target/Actual     │                     │")
-	fmt.Println("├───────────────────────────────────────────────────────────────────────────────┤")
+	fmt.Println("┌──────────────────────────────────────────────────────────────────────────────┐")
+	fmt.Println("│ Time    │ CPU % │ Memory (MB)       │ File (MB)         │ Progress           │")
+	fmt.Println("│         │       │ Target/Actual     │ Target/Actual     │                    │")
+	fmt.Println("├──────────────────────────────────────────────────────────────────────────────┤")
 }
 
 // showStatus displays the current resource status
@@ -140,7 +140,7 @@ func (dm *DisplayManager) showStatus(status ResourceStatus) {
 	}
 
 	// Display status on a new line (like logs)
-	fmt.Printf("│ %-7s │ %-5s │ %-17s │ %-17s │ %-19s │\n",
+	fmt.Printf("│ %-7s │ %-5s │ %-17s │ %-17s │ %-18s │\n",
 		elapsedStr, cpuStr, memStr, fileStr, progressStr)
 }
 

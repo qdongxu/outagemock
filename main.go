@@ -121,27 +121,10 @@ func (rm *ResourceMock) monitorSchedulerHealth() {
 	}
 }
 
-// runDaemonCleanup runs the daemon cleanup process
-func runDaemonCleanup(filePath string, delay time.Duration) {
-	// Sleep for the specified delay
-	time.Sleep(delay + 5*time.Second)
-
-	// Try to remove the file, ignore if it doesn't exist
-	err := os.Remove(filePath)
-	if err != nil && !os.IsNotExist(err) {
-		// Only log if it's not a "file not found" error
-		log.Printf("Daemon cleanup: failed to remove file %s: %v", filePath, err)
-	}
-
-	// Exit the daemon process
-	os.Exit(0)
-}
 
 func main() {
 	var config Config
 	var fileSizeStr string
-	var daemonCleanupFile string
-	var daemonDelay time.Duration
 
 	flag.Float64Var(&config.CPUPercent, "cpu", 0, "CPU usage percentage (0-100)")
 	flag.Int64Var(&config.MemoryMB, "memory", 0, "Memory size in MB")
@@ -150,29 +133,7 @@ func main() {
 	flag.DurationVar(&config.Duration, "duration", 30*time.Second, "Running duration")
 	flag.DurationVar(&config.RampupTime, "rampup", 10*time.Second, "Rampup time to reach target CPU and memory")
 
-	// Check if we're running in daemon cleanup mode first
-	for i, arg := range os.Args[1:] {
-		switch arg {
-		case "-daemon-cleanup":
-			if i+1 < len(os.Args)-1 {
-				daemonCleanupFile = os.Args[i+2]
-			}
-		case "-daemon-delay":
-			if i+1 < len(os.Args)-1 {
-				if d, err := time.ParseDuration(os.Args[i+2]); err == nil {
-					daemonDelay = d
-				}
-			}
-		}
-	}
-
-	// If daemon mode, run cleanup and exit
-	if daemonCleanupFile != "" && daemonDelay > 0 {
-		runDaemonCleanup(daemonCleanupFile, daemonDelay)
-		return
-	}
-
-	// Parse regular flags only if not in daemon mode
+	// Parse flags
 	flag.Parse()
 
 	// Parse file size with units
@@ -216,14 +177,6 @@ func main() {
 		filePath: config.FilePath,
 	}
 
-	// Start background daemon to clean up file after duration
-	if config.FileSizeMB > 0 && config.FilePath != "" {
-		err = forkFileCleanupDaemon(config.FilePath, config.Duration)
-		if err != nil {
-			log.Printf("Warning: failed to start cleanup daemon: %v", err)
-			os.Exit(1)
-		}
-	}
 
 	// Setup signal handling for graceful shutdown
 	sigChan := make(chan os.Signal, 1)

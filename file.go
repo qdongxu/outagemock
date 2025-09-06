@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"os/exec"
 	"time"
 )
 
@@ -102,38 +101,3 @@ func (rm *ResourceMock) consumeFile() {
 	}
 }
 
-// forkFileCleanupDaemon creates a background daemon process to remove the file after specified duration
-func forkFileCleanupDaemon(filePath string, duration time.Duration) error {
-	if filePath == "" {
-		return nil // No file to clean up
-	}
-
-	// Calculate sleep time: duration + 5 seconds
-	sleepSeconds := int(duration.Seconds()) + 5
-
-	// Create a one-line bash script to sleep and clean up the file
-	script := fmt.Sprintf("sleep %d && rm -f %s", sleepSeconds, filePath)
-
-	// Use nohup bash -c to execute the cleanup script
-	cmd := exec.Command("nohup", "bash", "-c", script)
-
-	// Redirect output to /dev/null to ensure no output and prevent nohup.out creation
-	devNull, err := os.OpenFile("/dev/null", os.O_WRONLY, 0)
-	if err != nil {
-		return fmt.Errorf("failed to open /dev/null: %v", err)
-	}
-	defer devNull.Close()
-
-	cmd.Stdout = devNull
-	cmd.Stderr = devNull
-	cmd.Stdin = nil
-
-	// Start the daemon process
-	err = cmd.Start()
-	if err != nil {
-		return fmt.Errorf("failed to start cleanup daemon: %v", err)
-	}
-
-	// Don't wait for the process - let it run independently
-	return nil
-}

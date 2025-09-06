@@ -44,80 +44,36 @@ func (rm *ResourceMock) consumeCPU() {
 func (rm *ResourceMock) cpuWorker(coreID int) int {
 	defer rm.wg.Done()
 
-	// Use a separate ticker for display updates (only from first core)
-	var displayTicker *time.Ticker
-	if coreID == 0 {
-		displayTicker = time.NewTicker(2 * time.Second)
-		defer displayTicker.Stop()
-	}
-
 	workDuration := time.Duration(0)
 	sleepDuration := time.Duration(0)
 	count := 0
 	currentCPUPercent := rm.getCurrentCPUUsage()
 
 	for {
-		if coreID == 0 {
-			// First core handles display updates
-			select {
-			case <-rm.ctx.Done():
-				return count
-			case <-displayTicker.C:
-				// Get current target CPU usage
-				currentCPUPercent = rm.getCurrentCPUUsage()
-				
-				// Print target CPU usage continuously
-				fmt.Printf("CPU usage: %.1f%% (target across %d cores)\n", currentCPUPercent, runtime.NumCPU())
-			default:
-				// Get current target CPU usage
-				currentCPUPercent = rm.getCurrentCPUUsage()
+		select {
+		case <-rm.ctx.Done():
+			return count
+		default:
+			// Get current target CPU usage
+			currentCPUPercent = rm.getCurrentCPUUsage()
 
-				// Calculate work and sleep time based on current CPU percentage
-				// For 30% CPU: work for 6ms, sleep for 14ms in a 20ms cycle
-				workDuration = time.Duration(currentCPUPercent*0.2) * time.Millisecond
-				sleepDuration = time.Duration((100-currentCPUPercent)*0.2) * time.Millisecond
+			// Calculate work and sleep time based on current CPU percentage
+			// For 30% CPU: work for 6ms, sleep for 14ms in a 20ms cycle
+			workDuration = time.Duration(currentCPUPercent*0.2) * time.Millisecond
+			sleepDuration = time.Duration((100-currentCPUPercent)*0.2) * time.Millisecond
 
-				// Do CPU-intensive work for the calculated duration
-				workStart := time.Now()
-				for time.Since(workStart) <= workDuration {
-					// CPU-intensive work
-					for i := 0; i < 10000; i++ {
-						count += (i*count + i + count) / 13
-					}
-				}
-
-				// Sleep for the remaining time to achieve target CPU usage
-				if sleepDuration > 0 {
-					time.Sleep(sleepDuration)
+			// Do CPU-intensive work for the calculated duration
+			workStart := time.Now()
+			for time.Since(workStart) <= workDuration {
+				// CPU-intensive work
+				for i := 0; i < 10000; i++ {
+					count += (i*count + i + count) / 13
 				}
 			}
-		} else {
-			// Other cores only do CPU work
-			select {
-			case <-rm.ctx.Done():
-				return count
-			default:
-				// Get current target CPU usage
-				currentCPUPercent = rm.getCurrentCPUUsage()
 
-				// Calculate work and sleep time based on current CPU percentage
-				// For 30% CPU: work for 6ms, sleep for 14ms in a 20ms cycle
-				workDuration = time.Duration(currentCPUPercent*0.2) * time.Millisecond
-				sleepDuration = time.Duration((100-currentCPUPercent)*0.2) * time.Millisecond
-
-				// Do CPU-intensive work for the calculated duration
-				workStart := time.Now()
-				for time.Since(workStart) <= workDuration {
-					// CPU-intensive work
-					for i := 0; i < 10000; i++ {
-						count += (i*count + i + count) / 13
-					}
-				}
-
-				// Sleep for the remaining time to achieve target CPU usage
-				if sleepDuration > 0 {
-					time.Sleep(sleepDuration)
-				}
+			// Sleep for the remaining time to achieve target CPU usage
+			if sleepDuration > 0 {
+				time.Sleep(sleepDuration)
 			}
 		}
 	}

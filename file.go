@@ -50,10 +50,6 @@ func (rm *ResourceMock) consumeFile() {
 	ticker := time.NewTicker(50 * time.Millisecond) // Faster ticker
 	defer ticker.Stop()
 
-	// Use a separate ticker for display updates
-	displayTicker := time.NewTicker(2 * time.Second) // Update display every 2 seconds
-	defer displayTicker.Stop()
-
 	writtenBytes := int64(0) // Track total bytes written
 
 	for {
@@ -100,17 +96,9 @@ func (rm *ResourceMock) consumeFile() {
 					log.Fatalf("Failed to sync file: %v", err)
 				}
 			}
-		case <-displayTicker.C:
-			// Get current target file size based on rampup progress
-			currentFileSizeMB := rm.getCurrentFileSizeUsage()
 			
-			// Calculate actual file size in MB
-			actualFileSizeMB := writtenBytes / (1024 * 1024)
-			
-			// Print both target and actual sizes continuously
-			fmt.Printf("File size: %.1f MB / %.1f MB (target/actual)\n",
-				float64(currentFileSizeMB),
-				float64(actualFileSizeMB))
+			// Update actual file size in resource status
+			rm.resourceStatus.FileActualMB = writtenBytes / (1024 * 1024)
 		}
 	}
 }

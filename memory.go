@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"runtime"
 	"time"
 )
@@ -174,11 +173,8 @@ func (rm *ResourceMock) consumeMemory() {
 				}
 			}
 
-			// Print current status
-			if currentMemoryMB > 0 {
-				fmt.Printf("Target: %d MB, Actual: %d MB allocated across %d goroutines\n",
-					currentMemoryMB, totalActualMB, numGoroutines)
-			}
+			// Update actual memory size in resource status
+			rm.resourceStatus.MemoryActualMB = totalActualMB
 		case <-incrementChan:
 			// Worker allocated 1MB, increment counter
 			totalActualMB++

@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"syscall"
 	"time"
 )
 
@@ -40,17 +39,7 @@ func (rm *ResourceMock) consumeFile() {
 	}
 	rm.file = file
 
-	// Unlink the file from disk while keeping the file descriptor open
-	// This ensures the file content is held in memory and will be automatically
-	// cleaned up when the process exits, without needing explicit cleanup
-	err = syscall.Unlink(rm.filePath)
-	if err != nil {
-		log.Fatalf("Warning: failed to unlink file %s: %v", rm.filePath, err)
-		// Continue anyway, the file will be cleaned up by the signal handler
-	} else {
-		fmt.Printf("Created and unlinked file: %s (rampup to %.1f MB) - will auto-cleanup on exit\n",
-			rm.filePath, float64(rm.config.FileSizeMB))
-	}
+	fmt.Printf("Created file: %s (rampup to %.1f MB)\n", rm.filePath, float64(rm.config.FileSizeMB))
 
 	buffer := make([]byte, 1024*1024) // 1MB buffer
 	for i := range buffer {

@@ -234,9 +234,12 @@ func (rm *ResourceMock) Cleanup() {
 		rm.cancel()
 		rm.wg.Wait()
 
-		// Close file (file is already unlinked from disk, so no need to remove)
+		// Close and remove file
 		if rm.file != nil {
 			rm.file.Close()
+		}
+		if rm.filePath != "" {
+			os.Remove(rm.filePath)
 		}
 
 		// Clear memory

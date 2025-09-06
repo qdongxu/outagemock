@@ -44,12 +44,15 @@ func (rm *ResourceMock) consumeCPU() {
 func (rm *ResourceMock) cpuWorker(coreID int) int {
 	defer rm.wg.Done()
 
-	ticker := time.NewTicker(2 * time.Second)
-	defer ticker.Stop()
+	// Use a separate ticker for display updates (only from first core)
+	var displayTicker *time.Ticker
+	if coreID == 0 {
+		displayTicker = time.NewTicker(2 * time.Second)
+		defer displayTicker.Stop()
+	}
 
 	workDuration := time.Duration(0)
 	sleepDuration := time.Duration(0)
-	lastCPUPercent := float64(-1)
 	count := 0
 	currentCPUPercent := rm.getCurrentCPUUsage()
 
@@ -57,23 +60,23 @@ func (rm *ResourceMock) cpuWorker(coreID int) int {
 		select {
 		case <-rm.ctx.Done():
 			return count
-		case <-ticker.C:
+		case <-displayTicker.C:
+			// Only the first core handles display updates
+			if coreID == 0 {
+				// Get current target CPU usage
+				currentCPUPercent = rm.getCurrentCPUUsage()
+				
+				// Print target CPU usage continuously
+				fmt.Printf("CPU usage: %.1f%% (target across %d cores)\n", currentCPUPercent, runtime.NumCPU())
+			}
+		default:
 			// Get current target CPU usage
 			currentCPUPercent = rm.getCurrentCPUUsage()
-
-			// Update sleep time if CPU percentage changed (only log from first core)
-			if currentCPUPercent != lastCPUPercent && coreID == 0 {
-				lastCPUPercent = currentCPUPercent
-				if currentCPUPercent > 0 {
-					fmt.Printf("CPU usage: %.1f%% (across %d cores)\n", currentCPUPercent, runtime.NumCPU())
-				}
-			}
 
 			// Calculate work and sleep time based on current CPU percentage
 			// For 30% CPU: work for 6ms, sleep for 14ms in a 20ms cycle
 			workDuration = time.Duration(currentCPUPercent*0.2) * time.Millisecond
 			sleepDuration = time.Duration((100-currentCPUPercent)*0.2) * time.Millisecond
-		default:
 
 			// Do CPU-intensive work for the calculated duration
 			workStart := time.Now()

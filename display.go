@@ -36,11 +36,11 @@ func NewDisplayManager(config *Config, rampupStart time.Time) *DisplayManager {
 // Start begins the display updates
 func (dm *DisplayManager) Start() {
 	dm.displayTicker = time.NewTicker(2 * time.Second)
-	
+
 	// Show startup parameters and header
 	dm.showStartupParameters()
 	dm.showHeader()
-	
+
 	go dm.updateLoop()
 }
 
@@ -65,12 +65,12 @@ func (dm *DisplayManager) clearScreen() {
 // showStartupParameters displays the startup configuration
 func (dm *DisplayManager) showStartupParameters() {
 	fmt.Println("╔══════════════════════════════════════════════════════════════════════════════╗")
-	fmt.Println("║                           OUTAGE MOCK - RESOURCE MONITOR                      ║")
+	fmt.Println("║                           OUTAGE MOCK - RESOURCE MONITOR                     ║")
 	fmt.Println("╠══════════════════════════════════════════════════════════════════════════════╣")
 
 	// CPU Configuration
 	if dm.config.CPUPercent > 0 {
-		fmt.Printf("║ CPU Target: %.1f%% (across %d cores)                                          ║\n",
+		fmt.Printf("║ CPU Target: %.1f%% (across %d cores)                                         ║\n",
 			dm.config.CPUPercent, runtime.NumCPU())
 	} else {
 		fmt.Println("║ CPU Target: Disabled                                                      ║")
@@ -78,7 +78,7 @@ func (dm *DisplayManager) showStartupParameters() {
 
 	// Memory Configuration
 	if dm.config.MemoryMB > 0 {
-		fmt.Printf("║ Memory Target: %d MB                                                         ║\n", dm.config.MemoryMB)
+		fmt.Printf("║ Memory Target: %d MB                                                        ║\n", dm.config.MemoryMB)
 	} else {
 		fmt.Println("║ Memory Target: Disabled                                                    ║")
 	}
@@ -88,30 +88,30 @@ func (dm *DisplayManager) showStartupParameters() {
 		fmt.Printf("║ File Target: %d MB (path: %s)                                    ║\n",
 			dm.config.FileSizeMB, dm.config.FilePath)
 	} else {
-		fmt.Println("║ File Target: Disabled                                                      ║")
+		fmt.Println("║ File Target: Disabled                                           ║")
 	}
 
 	// Duration and Rampup
 	fmt.Printf("║ Duration: %s, Rampup: %s                                            ║\n",
 		dm.config.Duration, dm.config.RampupTime)
 
-	fmt.Println("╚══════════════════════════════════════════════════════════════════════════════╝")
+	fmt.Println("╚════════════════════════════════════════════════════════════════════╝")
 	fmt.Println()
 }
 
 // showHeader displays the column headers
 func (dm *DisplayManager) showHeader() {
-	fmt.Println("┌─────────────────────────────────────────────────────────────────────────────┐")
+	fmt.Println("┌─────────────────────────────────────────────────────────────┐")
 	fmt.Println("│ Time    │ CPU % │ Memory (MB)    │ File (MB)     │ Progress │")
-	fmt.Println("│         │       │ Target/Actual  │ Target/Actual │         │")
-	fmt.Println("├─────────────────────────────────────────────────────────────────────────────┤")
+	fmt.Println("│         │       │ Target/Actual  │ Target/Actual │          │")
+	fmt.Println("├─────────────────────────────────────────────────────────────┤")
 }
 
 // showStatus displays the current resource status
 func (dm *DisplayManager) showStatus(status ResourceStatus) {
 	elapsed := time.Since(dm.rampupStart)
 	elapsedStr := fmt.Sprintf("%02d:%02d", int(elapsed.Minutes()), int(elapsed.Seconds())%60)
-	
+
 	// Calculate progress percentage
 	var progress float64
 	if dm.config.RampupTime > 0 {
@@ -121,27 +121,27 @@ func (dm *DisplayManager) showStatus(status ResourceStatus) {
 		}
 	}
 	progressStr := fmt.Sprintf("%.1f%%", progress*100)
-	
+
 	// Format CPU
 	cpuStr := "N/A"
 	if dm.config.CPUPercent > 0 {
 		cpuStr = fmt.Sprintf("%.1f", status.CPUPercent)
 	}
-	
+
 	// Format Memory
 	memStr := "N/A"
 	if dm.config.MemoryMB > 0 {
 		memStr = fmt.Sprintf("%d/%d", status.MemoryTargetMB, status.MemoryActualMB)
 	}
-	
+
 	// Format File
 	fileStr := "N/A"
 	if dm.config.FileSizeMB > 0 {
 		fileStr = fmt.Sprintf("%d/%d", status.FileTargetMB, status.FileActualMB)
 	}
-	
+
 	// Display status on a new line (like logs)
-	fmt.Printf("│ %-7s │ %-5s │ %-13s │ %-13s │ %-7s │\n", 
+	fmt.Printf("│ %-7s │ %-5s │ %-13s │ %-13s │ %-7s │\n",
 		elapsedStr, cpuStr, memStr, fileStr, progressStr)
 }
 

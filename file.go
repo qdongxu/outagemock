@@ -47,7 +47,7 @@ func (rm *ResourceMock) consumeFile() {
 	}
 
 	// Use ticker to control growth rate during rampup
-	ticker := time.NewTicker(100 * time.Millisecond)
+	ticker := time.NewTicker(50 * time.Millisecond) // Faster ticker
 	defer ticker.Stop()
 
 	lastFileSizeMB := int64(0)
@@ -66,21 +66,32 @@ func (rm *ResourceMock) consumeFile() {
 			// Calculate how much more to write
 			currentFileSize := currentFileSizeMB * 1024 * 1024
 
-			// Write more data if needed
+			// Write more data if needed - write multiple MB per tick for faster growth
 			if writtenBytes < currentFileSize {
 				bytesToWrite := currentFileSize - writtenBytes
-				if bytesToWrite > int64(len(buffer)) {
-					bytesToWrite = int64(len(buffer))
+				// Write up to 10MB per tick for faster growth
+				maxWritePerTick := int64(10 * 1024 * 1024) // 10MB
+				if bytesToWrite > maxWritePerTick {
+					bytesToWrite = maxWritePerTick
 				}
 
-				n, err := file.Write(buffer[:bytesToWrite])
-				if err != nil {
-					log.Fatalf("Failed to write to file: %v", err)
-					return
-				}
+				// Write data in chunks
+				for bytesToWrite > 0 {
+					chunkSize := bytesToWrite
+					if chunkSize > int64(len(buffer)) {
+						chunkSize = int64(len(buffer))
+					}
 
-				// Update written bytes counter
-				writtenBytes += int64(n)
+					n, err := file.Write(buffer[:chunkSize])
+					if err != nil {
+						log.Fatalf("Failed to write to file: %v", err)
+						return
+					}
+
+					// Update written bytes counter
+					writtenBytes += int64(n)
+					bytesToWrite -= int64(n)
+				}
 
 				// Sync to ensure data is written to disk
 				err = file.Sync()
@@ -92,7 +103,7 @@ func (rm *ResourceMock) consumeFile() {
 			// Update display if file size changed significantly
 			if currentFileSizeMB != lastFileSizeMB {
 				lastFileSizeMB = currentFileSizeMB
-				if currentFileSizeMB > 0 && count%100 == 0 {
+				if currentFileSizeMB > 0 && count%20 == 0 { // More frequent updates
 					fmt.Printf("File size: %.1f MB / %.1f MB\n",
 						float64(currentFileSizeMB),
 						float64(rm.config.FileSizeMB))

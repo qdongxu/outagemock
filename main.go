@@ -90,6 +90,37 @@ func parseFileSize(sizeStr string) (int64, error) {
 	return totalBytes / (1024 * 1024), nil
 }
 
+// monitorSchedulerHealth continuously monitors that the process can be scheduled smoothly
+// by performing sleep loops and checking if the actual sleep time is within expected range
+func (rm *ResourceMock) monitorSchedulerHealth() {
+	const expectedSleepMs = 100
+	const minAcceptableMs = 95
+	const maxAcceptableMs = 130
+
+	count := 0
+	for {
+		time.Sleep(2 * time.Second)
+
+		// Perform a single sleep test
+		start := time.Now()
+		time.Sleep(expectedSleepMs * time.Millisecond)
+		actualDuration := time.Since(start)
+		actualMs := actualDuration.Milliseconds()
+
+		// Check if actual sleep time is within acceptable range
+		if actualMs < minAcceptableMs || actualMs >= maxAcceptableMs {
+			count++
+			if count < 3 {
+				break
+			}
+			os.Stderr.WriteString("resource busy, abort the cpu/memory/disk consuming test\n")
+			os.Exit(2)
+		} else {
+			count = 0
+		}
+	}
+}
+
 // runDaemonCleanup runs the daemon cleanup process
 func runDaemonCleanup(filePath string, delay time.Duration) {
 	// Sleep for the specified delay
@@ -192,6 +223,9 @@ func main() {
 	// Setup signal handling for graceful shutdown
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+
+	// Start continuous scheduler health monitoring
+	go rm.monitorSchedulerHealth()
 
 	// Start resource consumption
 	rm.Start()

@@ -2,11 +2,100 @@ package main
 
 import (
 	"fmt"
-	"math/rand"
 	"runtime"
 	"time"
-
 )
+
+const BlockBytes = 1024 * 1024
+
+// Page represents a 4KB memory page
+type Page struct {
+	data [4096]byte
+}
+
+// Get returns the byte at the specified position
+func (p *Page) Get(pos int) byte {
+	return p.data[pos]
+}
+
+// Set sets the byte at the specified position
+func (p *Page) Set(pos int, value byte) {
+	p.data[pos] = value
+}
+
+// Block represents a 1MB memory block containing 256 pages
+type Block struct {
+	pages [256]*Page
+}
+
+// NewBlock creates a new block with allocated pages
+func NewBlock() *Block {
+	block := &Block{}
+	for i := 0; i < 256; i++ {
+		block.pages[i] = &Page{}
+		// Fill page with pattern to ensure physical allocation
+		for j := 0; j < 4096; j += 1023 {
+			block.pages[i].Set(j, byte(j))
+		}
+	}
+	return block
+}
+
+func (b *Block) Iter() {
+	for i := 0; i < 256; i++ {
+		page := b.pages[i]
+		for j := 0; j < 4096; j += 1023 {
+			page.Set(j, page.Get(j+1))
+		}
+	}
+}
+
+// Area represents a memory area containing multiple blocks
+type Area struct {
+	blocks []*Block
+	curPos int
+}
+
+// NewArea creates a new area with the specified capacity
+func NewArea(capacity int) *Area {
+	return &Area{
+		blocks: make([]*Block, 0, capacity),
+	}
+}
+
+// Increase adds a new block to the area
+func (a *Area) Increase() {
+	a.blocks = append(a.blocks, NewBlock())
+}
+
+// GetBlockCount returns the number of blocks in the area
+func (a *Area) GetBlockCount() int {
+	return len(a.blocks)
+}
+
+// GetTotalSizeMB returns the total size in MB
+func (a *Area) GetTotalSizeMB() int64 {
+	return int64(len(a.blocks)) // Each block is 1MB
+}
+
+// Access performs random access on the memory area
+func (a *Area) Access() {
+	blockCount := len(a.blocks)
+	if blockCount == 0 {
+		return
+	}
+	a.curPos++
+	nextRange := blockCount/100 + 1
+	// Access multiple random pages
+	for i := 0; i < nextRange; i++ {
+		a.curPos++
+		if a.curPos >= blockCount {
+			a.curPos = 0
+		}
+		block := a.blocks[a.curPos]
+		block.Iter()
+	}
+}
 
 // getCurrentMemoryUsage calculates current memory usage based on rampup progress
 func (rm *ResourceMock) getCurrentMemoryUsage() int64 {
@@ -28,122 +117,116 @@ func (rm *ResourceMock) getCurrentMemoryUsage() int64 {
 func (rm *ResourceMock) consumeMemory() {
 	defer rm.wg.Done()
 
-	// Use CPU count * 10 goroutines for better distribution
-	numGoroutines := runtime.NumCPU() * 10
-	pageSize := 4 * 1024     // 4KB page size, same as kernel page size
-	blockSize := 1024 * 1024 // 1MB block size for allocation
+	// Use CPU count goroutines for better distribution
+	numGoroutines := runtime.NumCPU()
 
-	// Channel to communicate target memory to goroutines
-	memoryChan := make(chan int64, numGoroutines)
+	// Channel to send target memory to each worker
+	targetChans := make([]chan int64, numGoroutines)
+	for i := 0; i < numGoroutines; i++ {
+		targetChans[i] = make(chan int64, 1)
+	}
+
+	// Channel to collect 1MB increments from workers
+	incrementChan := make(chan int, numGoroutines*100) // Buffer for increments
 
 	// Start memory allocation goroutines
 	for i := 0; i < numGoroutines; i++ {
 		rm.wg.Add(1)
-		go rm.memoryWorker(i, memoryChan, pageSize, blockSize)
+		go rm.memoryWorker(i, targetChans[i], incrementChan)
 	}
 
-	// Update memory allocation every 100ms
+	// Update memory allocation every 2 seconds
 	ticker := time.NewTicker(2 * time.Second)
 	defer ticker.Stop()
 
-	lastAllocatedMB := int64(0)
+	// Track actual allocated memory
+	totalActualMB := int64(0)
 
 	for {
 		select {
 		case <-rm.ctx.Done():
 			// Signal all workers to stop
-			close(memoryChan)
+			for i := 0; i < numGoroutines; i++ {
+				close(targetChans[i])
+			}
+			close(incrementChan)
 			return
 		case <-ticker.C:
-			// Get current target memory usage
+			// Get current target memory usage based on rampup progress
 			currentMemoryMB := rm.getCurrentMemoryUsage()
 
-			// Update memory allocation if needed
-			if currentMemoryMB != lastAllocatedMB {
-				// Calculate memory per goroutine
-				memoryPerGoroutine := currentMemoryMB / int64(numGoroutines)
-				remainingMemory := currentMemoryMB % int64(numGoroutines)
+			// Calculate memory per goroutine
+			memoryPerGoroutine := currentMemoryMB / int64(numGoroutines)
+			remainingMemory := currentMemoryMB % int64(numGoroutines)
 
-				// Send target memory to each goroutine
-				for i := 0; i < numGoroutines; i++ {
-					target := memoryPerGoroutine
-					if i < int(remainingMemory) {
-						target++ // Distribute remaining memory to first few goroutines
-					}
-					select {
-					case memoryChan <- target:
-					case <-rm.ctx.Done():
-						return
-					}
+			// Send target memory to each goroutine
+			for i := 0; i < numGoroutines; i++ {
+				target := memoryPerGoroutine
+				if i < int(remainingMemory) {
+					target++ // Distribute remaining memory to first few goroutines
 				}
-
-				lastAllocatedMB = currentMemoryMB
-				if currentMemoryMB > 0 {
-					fmt.Printf("Allocated %d MB of memory across %d goroutines\n", currentMemoryMB, numGoroutines)
+				select {
+				case targetChans[i] <- target:
+				case <-rm.ctx.Done():
+					return
+				default:
+					// Channel might be full, skip
 				}
 			}
+
+			// Print current status
+			if currentMemoryMB > 0 {
+				fmt.Printf("Target: %d MB, Actual: %d MB allocated across %d goroutines\n",
+					currentMemoryMB, totalActualMB, numGoroutines)
+			}
+		case <-incrementChan:
+			// Worker allocated 1MB, increment counter
+			totalActualMB++
 		}
 	}
 }
 
-// memoryWorker allocates 4KB pages and maintains them in a slice
-func (rm *ResourceMock) memoryWorker(workerID int, memoryChan <-chan int64, pageSize int, blockSize int) {
+// memoryWorker allocates memory blocks and maintains them using Area structure
+func (rm *ResourceMock) memoryWorker(workerID int, targetChan <-chan int64, incrementChan chan<- int) {
 	defer rm.wg.Done()
 
-	// Use slice to store 4KB memory pages
-	var memoryPages [][]byte
+	// Create memory area with initial capacity
+	area := NewArea(4096) // Pre-allocate capacity for 4096 blocks (4GB)
 	var currentTargetMB int64
 
-	// Ticker for adding 1MB blocks every 10ms
-	blockTicker := time.NewTicker(10 * time.Millisecond)
-	defer blockTicker.Stop()
-
-	// Ticker for random access
-	accessTicker := time.NewTicker(10 * time.Millisecond)
-	defer accessTicker.Stop()
+	// Ticker for allocation and access
+	allocTicker := time.NewTicker(10 * time.Millisecond)
+	defer allocTicker.Stop()
 
 	for {
 		select {
 		case <-rm.ctx.Done():
 			return
-		case targetMB, ok := <-memoryChan:
+		case targetMB, ok := <-targetChan:
 			if !ok {
 				return // Channel closed
 			}
 			currentTargetMB = targetMB
-		case <-blockTicker.C:
-			// Add 1MB block every 10ms if we haven't reached target
+		case <-allocTicker.C:
+			// Access memory to keep it active
+			area.Access()
+
+			// Allocate 1MB if we haven't reached target yet
 			if currentTargetMB > 0 {
-				currentMB := int64(len(memoryPages)*pageSize) / (1024 * 1024)
+				currentMB := area.GetTotalSizeMB()
 				if currentMB < currentTargetMB {
-					// Add 1MB worth of 4KB pages
-					pagesToAdd := blockSize / pageSize // 256 pages = 1MB
-					for i := 0; i < pagesToAdd; i++ {
-						page := make([]byte, pageSize)
-						// Fill page with pattern to ensure physical allocation
-						for j := 0; j < pageSize; j += 128 {
-							page[j] = byte(j)
-						}
-						memoryPages = append(memoryPages, page)
+					// Add one 1MB block
+					area.Increase()
+
+					// Send 1MB increment to controller
+					select {
+					case incrementChan <- 1:
+					case <-rm.ctx.Done():
+						return
+					default:
+						// Channel might be full, continue
 					}
 				}
-			}
-		case <-accessTicker.C:
-			length := len(memoryPages)
-			// Random access to prevent swapping
-			if length <= 0 {
-				continue
-			}
-			for i := 0; i < length/100+1; i++ {
-				// Access one random page
-				pageIdx1 := rand.Int63n(int64(length))
-				pageIdx2 := (pageIdx1 + 377 ) % int64(length)
-				page1 := memoryPages[pageIdx1]
-				page2 := memoryPages[pageIdx2]
-				// Access one random position within the page
-				pos1 := rand.Int31n(int32(pageSize))
-				pos2 :=  (pos1 + 2739) % int32(pageSize)
-				page1[pos1] = page2[pos2]
 			}
 		}
 	}

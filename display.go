@@ -37,8 +37,7 @@ func NewDisplayManager(config *Config, rampupStart time.Time) *DisplayManager {
 func (dm *DisplayManager) Start() {
 	dm.displayTicker = time.NewTicker(2 * time.Second)
 	
-	// Clear screen and show startup parameters
-	dm.clearScreen()
+	// Show startup parameters and header
 	dm.showStartupParameters()
 	dm.showHeader()
 	
@@ -55,7 +54,6 @@ func (dm *DisplayManager) Stop() {
 
 // UpdateStatus updates the resource status and triggers display refresh
 func (dm *DisplayManager) UpdateStatus(status ResourceStatus) {
-	dm.clearStatusLines()
 	dm.showStatus(status)
 }
 
@@ -64,45 +62,39 @@ func (dm *DisplayManager) clearScreen() {
 	fmt.Print("\033[2J\033[H")
 }
 
-// clearStatusLines clears only the status lines (keeps header)
-func (dm *DisplayManager) clearStatusLines() {
-	// Move cursor to line 8 (after header) and clear to end of screen
-	fmt.Print("\033[8;1H\033[J")
-}
-
 // showStartupParameters displays the startup configuration
 func (dm *DisplayManager) showStartupParameters() {
 	fmt.Println("╔══════════════════════════════════════════════════════════════════════════════╗")
-	fmt.Println("║                           OUTAGE MOCK - RESOURCE MONITOR                    ║")
+	fmt.Println("║                           OUTAGE MOCK - RESOURCE MONITOR                      ║")
 	fmt.Println("╠══════════════════════════════════════════════════════════════════════════════╣")
-	
+
 	// CPU Configuration
 	if dm.config.CPUPercent > 0 {
-		fmt.Printf("║ CPU Target: %.1f%% (across %d cores)                                          ║\n", 
+		fmt.Printf("║ CPU Target: %.1f%% (across %d cores)                                          ║\n",
 			dm.config.CPUPercent, runtime.NumCPU())
 	} else {
 		fmt.Println("║ CPU Target: Disabled                                                      ║")
 	}
-	
+
 	// Memory Configuration
 	if dm.config.MemoryMB > 0 {
 		fmt.Printf("║ Memory Target: %d MB                                                         ║\n", dm.config.MemoryMB)
 	} else {
 		fmt.Println("║ Memory Target: Disabled                                                    ║")
 	}
-	
+
 	// File Configuration
 	if dm.config.FileSizeMB > 0 {
-		fmt.Printf("║ File Target: %d MB (path: %s)                                    ║\n", 
+		fmt.Printf("║ File Target: %d MB (path: %s)                                    ║\n",
 			dm.config.FileSizeMB, dm.config.FilePath)
 	} else {
 		fmt.Println("║ File Target: Disabled                                                      ║")
 	}
-	
+
 	// Duration and Rampup
-	fmt.Printf("║ Duration: %s, Rampup: %s                                            ║\n", 
+	fmt.Printf("║ Duration: %s, Rampup: %s                                            ║\n",
 		dm.config.Duration, dm.config.RampupTime)
-	
+
 	fmt.Println("╚══════════════════════════════════════════════════════════════════════════════╝")
 	fmt.Println()
 }
@@ -148,6 +140,7 @@ func (dm *DisplayManager) showStatus(status ResourceStatus) {
 		fileStr = fmt.Sprintf("%d/%d", status.FileTargetMB, status.FileActualMB)
 	}
 	
+	// Display status on a new line (like logs)
 	fmt.Printf("│ %-7s │ %-5s │ %-13s │ %-13s │ %-7s │\n", 
 		elapsedStr, cpuStr, memStr, fileStr, progressStr)
 }

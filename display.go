@@ -70,15 +70,14 @@ func (dm *DisplayManager) showStartupParameters() {
 
 	// CPU Configuration
 	if dm.config.CPUPercent > 0 {
-		fmt.Printf("║ CPU Target: %.1f%% (across %d cores)                                         ║\n",
-			dm.config.CPUPercent, runtime.NumCPU())
+		fmt.Printf("║ CPU Target: %-60s ║\n", fmt.Sprintf("%.1f%% (across %d cores)", dm.config.CPUPercent, runtime.NumCPU()))
 	} else {
 		fmt.Printf("║ CPU Target: %-60s ║\n", "Disabled")
 	}
 
 	// Memory Configuration
 	if dm.config.MemoryMB > 0 {
-		fmt.Printf("║ Memory Target: %-60d MB ║\n", dm.config.MemoryMB)
+		fmt.Printf("║ Memory Target: %-60s ║\n", fmt.Sprintf("%d MB", dm.config.MemoryMB))
 	} else {
 		fmt.Printf("║ Memory Target: %-60s ║\n", "Disabled")
 	}
